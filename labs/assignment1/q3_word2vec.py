@@ -15,7 +15,13 @@ def normalizeRows(x):
     """
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    denom = np.apply_along_axis(
+        lambda x: np.sqrt(x.T.dot(x)),
+        1,
+        x
+    )
+    
+    x /= denom[:, None]
     ### END YOUR CODE
 
     return x
@@ -58,7 +64,43 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
     """
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    
+    # import ipdb; ipdb.set_trace()
+    
+    vhat = predicted
+    
+    z = np.matmul(
+        outputVectors,
+        vhat
+    )
+    
+    # activations
+    a = softmax(z)
+
+    # log loss
+    # we want a distribution with all mass at the target value
+    cost = -np.log(
+        a[target]
+    )
+    
+    desired_probability_mass = 1.0
+
+    # initialize gradient of activations
+    d_a = a
+    
+    # derivative of loss with respect to activation
+    d_a[target] = d_a[target] - desired_probability_mass
+
+    grad = np.outer(
+        d_a,
+        vhat
+    )
+    
+    gradPred = np.matmul(
+        outputVectors.T,
+        z
+    )
+    
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -67,6 +109,7 @@ def softmaxCostAndGradient(predicted, target, outputVectors, dataset):
 def getNegativeSamples(target, dataset, K):
     """ Samples K indexes which are not the target """
 
+    # import ipdb; ipdb.set_trace()
     indices = [None] * K
     for k in xrange(K):
         newidx = dataset.sampleTokenIdx()
@@ -96,7 +139,42 @@ def negSamplingCostAndGradient(predicted, target, outputVectors, dataset,
     indices.extend(getNegativeSamples(target, dataset, K))
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    
+    # import ipdb; ipdb.set_trace()
+    
+    # initialize gradients of appropriate size
+    grad = np.zeros(outputVectors.shape)
+    
+    gradPred = np.zeros(predicted.shape)
+    
+    # activations
+    a = sigmoid(
+        np.matmul(
+            outputVectors[target],
+            predicted
+        )
+    )
+
+    # cost of positives sample
+    cost = -1 * np.log(a)
+    
+    grad[target] += predicted * (a - 1.0)
+    
+    gradPred += outputVectors[target] * (a - 1.0)
+
+    # cost of negative samples
+    for k in xrange(K):
+        
+        samp = indices[k + 1]
+        
+        z = sigmoid(np.dot(outputVectors[samp], predicted))
+        
+        cost -= np.log(1.0 - a)
+        
+        grad[samp] += predicted * a
+        
+        gradPred += outputVectors[samp] * a
+        
     ### END YOUR CODE
 
     return cost, gradPred, grad
@@ -131,7 +209,31 @@ def skipgram(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    # import ipdb; ipdb.set_trace()
+    
+    index_middle_word = tokens[currentWord]
+    
+    # multiplications with one-hot representations amounts to a lookup
+    vhat = inputVectors[index_middle_word]
+
+    for j in contextWords:
+        
+        index_context_word = tokens[j]
+        
+        c_cost, c_grad_in, c_grad_out = \
+            word2vecCostAndGradient(
+                vhat,
+                index_context_word,
+                outputVectors,
+                dataset
+            )
+            
+        cost += c_cost
+        
+        # an embedding is updated whenever it's in the context of a target word
+        gradIn[index_middle_word] += c_grad_in
+        
+        gradOut += c_grad_out
     ### END YOUR CODE
 
     return cost, gradIn, gradOut
@@ -155,7 +257,31 @@ def cbow(currentWord, C, contextWords, tokens, inputVectors, outputVectors,
     gradOut = np.zeros(outputVectors.shape)
 
     ### YOUR CODE HERE
-    raise NotImplementedError
+    # import ipdb; ipdb.set_trace()
+    
+    predicted_indices = [
+        tokens[word] for word in contextWords
+    ]
+    
+    predicted_vectors = inputVectors[predicted_indices]
+    
+    predicted = np.sum(
+        predicted_vectors,
+        axis=0
+    )
+    
+    target = tokens[currentWord]
+    
+    cost, gradIn_predicted, gradOut = word2vecCostAndGradient(
+        predicted,
+        target,
+        outputVectors,
+        dataset
+    )
+    
+    for i in predicted_indices:
+        
+        gradIn[i] += gradIn_predicted
     ### END YOUR CODE
 
     return cost, gradIn, gradOut

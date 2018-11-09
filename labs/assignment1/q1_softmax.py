@@ -31,12 +31,43 @@ def softmax(x):
     if len(x.shape) > 1:
         # Matrix
         ### YOUR CODE HERE
-        raise NotImplementedError
+        
+        # take e^(data) then normalize
+        
+        # for numerical stability
+        exponential = lambda x: np.exp(x - np.max(x))
+        
+        normalization_factor = lambda x: 1.0 / np.sum(x)
+        
+        x = np.apply_along_axis(
+            exponential,
+            1,
+            x
+        )
+        
+        denominator = np.apply_along_axis(
+            normalization_factor,
+            1,
+            x
+        )
+
+        if len(denominator.shape) == 1:
+            denominator = denominator.reshape(
+                (denominator.shape[0], 1)
+            )
+
+        x = x * denominator
+        
         ### END YOUR CODE
     else:
         # Vector
         ### YOUR CODE HERE
-        raise NotImplementedError
+        numerator = np.exp(x - np.max(x))
+        
+        # create probability distribution
+        denominator = 1.0 / np.sum(numerator)
+        
+        x = numerator.dot(denominator)
         ### END YOUR CODE
 
     assert x.shape == orig_shape
